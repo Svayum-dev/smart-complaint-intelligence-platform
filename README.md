@@ -93,6 +93,25 @@ smart-complaint-intelligence-platform/
 * Mobile application support
 * Advanced AI-driven insights
 
+## Screenshots
+
+### Dashboard
+
+![Dashboard](assets/screenshots/dashboard.png)
+
+### Submit Complaint
+
+![Submit Complaint](assets/screenshots/submit-complaint.png)
+
+### AI Analysis
+
+![AI Analysis](assets/screenshots/ai-analysis.png)
+
+### Analytics Dashboard
+
+![Analytics Dashboard](assets/screenshots/analytics.png)
+
+
 ## Author
 
 Svayum
