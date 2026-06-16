@@ -1,0 +1,198 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard — SCIP{% endblock %}
+{% block breadcrumb %}Dashboard{% endblock %}
+
+{% block content %}
+<!-- ── Page Header ── -->
+<div class="page-header animate-in">
+  <div>
+    <h1 class="page-title">Welcome back, Admin 👋</h1>
+    <p class="page-subtitle">Here's what's happening in your society today.</p>
+  </div>
+  <a href="{{ url_for('submit') }}" class="btn btn-primary">
+    <svg class="icon-svg icon-svg-xs" viewBox="0 0 24 24"><line x1="12" x2="12" y1="5" y2="19"/><line x1="5" x2="19" y1="12" y2="12"/></svg>
+    Submit Complaint
+  </a>
+</div>
+
+<!-- ── KPI Stat Cards ── -->
+<div class="stats-grid">
+
+  <div class="glass-card stat-card">
+    <div class="stat-icon-wrap stat-icon-total">
+      <svg class="icon-svg icon-svg-md" style="stroke:var(--accent)" viewBox="0 0 24 24"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"/><path d="M6 6h10"/><path d="M6 10h10"/><path d="M6 14h10"/></svg>
+    </div>
+    <div class="stat-info">
+      <div class="stat-label">Total Complaints</div>
+      <div class="stat-value" data-count="{{ stats.total }}">{{ stats.total }}</div>
+      <div class="stat-trend trend-neutral">Recorded lifetime</div>
+    </div>
+  </div>
+
+  <div class="glass-card stat-card">
+    <div class="stat-icon-wrap stat-icon-open">
+      <svg class="icon-svg icon-svg-md" style="stroke:var(--warning)" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 8v4"/><path d="M12 16h.01"/></svg>
+    </div>
+    <div class="stat-info">
+      <div class="stat-label">Open Complaints</div>
+      <div class="stat-value" data-count="{{ stats.open }}">{{ stats.open }}</div>
+      <div class="stat-trend trend-neutral">Awaiting action</div>
+    </div>
+  </div>
+
+  <div class="glass-card stat-card">
+    <div class="stat-icon-wrap stat-icon-progress">
+      <svg class="icon-svg icon-svg-md" style="stroke:var(--info)" viewBox="0 0 24 24"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.1a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+    </div>
+    <div class="stat-info">
+      <div class="stat-label">In Progress</div>
+      <div class="stat-value" data-count="{{ stats.in_progress }}">{{ stats.in_progress }}</div>
+      <div class="stat-trend trend-up">Active resolution</div>
+    </div>
+  </div>
+
+  <div class="glass-card stat-card">
+    <div class="stat-icon-wrap stat-icon-resolved">
+      <svg class="icon-svg icon-svg-md" style="stroke:var(--success)" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+    </div>
+    <div class="stat-info">
+      <div class="stat-label">Resolved</div>
+      <div class="stat-value" data-count="{{ stats.resolved }}">{{ stats.resolved }}</div>
+      <div class="stat-trend trend-up">Closed successfully</div>
+    </div>
+  </div>
+
+  <div class="glass-card stat-card">
+    <div class="stat-icon-wrap stat-icon-high">
+      <svg class="icon-svg icon-svg-md" style="stroke:var(--critical)" viewBox="0 0 24 24"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
+    </div>
+    <div class="stat-info">
+      <div class="stat-label">High Priority</div>
+      <div class="stat-value" data-count="{{ stats.high_priority }}">{{ stats.high_priority }}</div>
+      <div class="stat-trend" style="color: var(--danger);">Urgent attention</div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ── Quick Metrics Row ── -->
+<div style="display:grid; grid-template-columns: repeat(3,1fr); gap:20px; margin-bottom:28px;">
+
+  <div class="glass-card animate-in" style="padding:20px; animation-delay:0.2s;">
+    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px;">
+      <span style="font-size:13px; font-weight:600; color:var(--text-secondary);">Resolution Rate</span>
+      <span style="font-size:11px; color:var(--success); background:var(--success-subtle); padding:3px 9px; border-radius:20px;">
+        {{ ((stats.resolved / stats.total) * 100) | round(1) if stats.total else 0 }}%
+      </span>
+    </div>
+    <div style="height:6px; background:rgba(255,255,255,0.06); border-radius:3px; overflow:hidden;">
+      <div style="height:100%; width:{{ ((stats.resolved / stats.total) * 100) | round(1) if stats.total else 0 }}%;
+                  background: linear-gradient(90deg, var(--success), #00a884); border-radius:3px;
+                  transition: width 1s ease;"></div>
+    </div>
+    <div style="font-size:12px; color:var(--text-muted); margin-top:8px;">{{ stats.resolved }} of {{ stats.total }} complaints resolved</div>
+  </div>
+
+  <div class="glass-card animate-in" style="padding:20px; animation-delay:0.25s;">
+    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px;">
+      <span style="font-size:13px; font-weight:600; color:var(--text-secondary);">Critical Rate</span>
+      <span style="font-size:11px; color:var(--critical); background:var(--critical-subtle); padding:3px 9px; border-radius:20px;">
+        {{ ((stats.high_priority / stats.total) * 100) | round(1) if stats.total else 0 }}%
+      </span>
+    </div>
+    <div style="height:6px; background:rgba(255,255,255,0.06); border-radius:3px; overflow:hidden;">
+      <div style="height:100%; width:{{ ((stats.high_priority / stats.total) * 100) | round(1) if stats.total else 0 }}%;
+                  background: linear-gradient(90deg, var(--danger), var(--critical)); border-radius:3px;"></div>
+    </div>
+    <div style="font-size:12px; color:var(--text-muted); margin-top:8px;">{{ stats.high_priority }} high/critical priority issues</div>
+  </div>
+
+  <div class="glass-card animate-in" style="padding:20px; animation-delay:0.3s;">
+    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px;">
+      <span style="font-size:13px; font-weight:600; color:var(--text-secondary);">Active Rate</span>
+      <span style="font-size:11px; color:var(--info); background:var(--info-subtle); padding:3px 9px; border-radius:20px;">
+        {{ (((stats.open + stats.in_progress) / stats.total) * 100) | round(1) if stats.total else 0 }}%
+      </span>
+    </div>
+    <div style="height:6px; background:rgba(255,255,255,0.06); border-radius:3px; overflow:hidden;">
+      <div style="height:100%; width:{{ (((stats.open + stats.in_progress) / stats.total) * 100) | round(1) if stats.total else 0 }}%;
+                  background: linear-gradient(90deg, var(--warning), var(--info)); border-radius:3px;"></div>
+    </div>
+    <div style="font-size:12px; color:var(--text-muted); margin-top:8px;">{{ stats.open + stats.in_progress }} complaints still active</div>
+  </div>
+
+</div>
+
+<!-- ── Recent Complaints Table ── -->
+<div class="glass-card table-card animate-in" style="animation-delay:0.35s;">
+  <div class="table-header">
+    <div>
+      <div class="table-title">Recent Complaints</div>
+      <div class="table-subtitle">Latest 10 submissions across all categories</div>
+    </div>
+    <a href="{{ url_for('history') }}" class="btn btn-ghost btn-sm">View All →</a>
+  </div>
+
+  {% if recent %}
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>Title</th>
+        <th>Category</th>
+        {% if session.get('role') == 'admin' %}
+        <th>Raised By</th>
+        {% endif %}
+        <th>Priority</th>
+        <th>Status</th>
+        <th>Location</th>
+        <th>Date/Time</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for c in recent %}
+      <tr>
+        <td style="color:var(--text-muted); font-size:12px;">#{{ c.id }}</td>
+        <td class="complaint-title-cell">
+          <span class="title-text" title="{{ c.title }}">{{ c.title }}</span>
+        </td>
+        <td><span class="category-chip">{{ c.category }}</span></td>
+        {% if session.get('role') == 'admin' %}
+        <td style="font-size:13px; color:var(--text-secondary);">
+          <div style="font-weight:600;">{{ c.raised_by or 'System' }}</div>
+          <div style="font-size:10px; color:var(--text-muted);">@{{ c.raised_by_username or 'system' }}</div>
+        </td>
+        {% endif %}
+        <td>
+          {% set p = c.priority | lower %}
+          <span class="badge badge-{{ p }}">{{ c.priority }}</span>
+        </td>
+        <td>
+          {% set s = c.status | replace(' ', '') | lower %}
+          <span class="badge status-badge
+            {% if c.status == 'Open' %}badge-open
+            {% elif c.status == 'In Progress' %}badge-progress
+            {% else %}badge-resolved{% endif %}">
+            <span class="badge-dot"></span>
+            {{ c.status }}
+          </span>
+        </td>
+        <td style="color:var(--text-secondary); font-size:12px;">{{ c.location or '—' }}</td>
+        <td style="color:var(--text-muted); font-size:12px; white-space:nowrap;" title="{{ c.created_at }}">
+          {{ c.created_at[:16].replace('T',' ') }}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  {% else %}
+  <div class="empty-state animate-in">
+    <svg class="empty-illustration-svg" viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+    <div class="empty-title">No complaints yet</div>
+    <div class="empty-desc">Complaints will appear here once submitted.</div>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

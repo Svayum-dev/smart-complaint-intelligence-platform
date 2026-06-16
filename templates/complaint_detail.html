@@ -1,0 +1,435 @@
+{% extends "base.html" %}
+
+{% block title %}Complaint #{{ complaint.id }} — SCIP{% endblock %}
+{% block breadcrumb %}Complaint #{{ complaint.id }}{% endblock %}
+
+{% block content %}
+<div class="page-header animate-in">
+  <div>
+    <h1 class="page-title">Complaint #{{ complaint.id }}</h1>
+    <p class="page-subtitle">Submitted {{ complaint.created_at[:10] }} · Last updated {{ complaint.updated_at[:10] }}</p>
+  </div>
+  <div style="display:flex; gap:10px; flex-wrap:wrap;">
+    <a href="{{ url_for('history') }}" class="btn btn-ghost">← Back to History</a>
+    <a href="{{ url_for('submit') }}" class="btn btn-primary">➕ New Complaint</a>
+  </div>
+</div>
+
+<div class="detail-grid">
+
+  <!-- ── LEFT: Complaint Info ── -->
+  <div style="display:flex; flex-direction:column; gap:20px;">
+
+    <!-- Main Info Card -->
+    <div class="glass-card animate-in" style="padding:32px; animation-delay:0.05s;">
+      <div style="font-size:11px; font-weight:700; letter-spacing:1.2px; text-transform:uppercase;
+                  color:var(--text-muted); margin-bottom:6px;">Complaint Title</div>
+      <h2 style="font-size:22px; font-weight:800; line-height:1.3; margin-bottom:24px; letter-spacing:-0.3px;">
+        {{ complaint.title }}
+      </h2>
+
+      <div class="detail-meta-grid">
+        <div class="detail-meta-item">
+          <div class="detail-meta-label">
+            <svg class="icon-svg icon-svg-xs" style="stroke:var(--text-muted); margin-right:3px;" viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+            Category
+          </div>
+          <div><span class="category-chip">{{ complaint.category }}</span></div>
+        </div>
+        <div class="detail-meta-item">
+          <div class="detail-meta-label">
+            <svg class="icon-svg icon-svg-xs" style="stroke:var(--text-muted); margin-right:3px;" viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+            Priority
+          </div>
+          <div>
+            <span class="badge badge-{{ complaint.priority | lower }}">{{ complaint.priority }}</span>
+          </div>
+        </div>
+        <div class="detail-meta-item">
+          <div class="detail-meta-label">
+            <svg class="icon-svg icon-svg-xs" style="stroke:var(--text-muted); margin-right:3px;" viewBox="0 0 24 24"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M3 21v-5h5"/></svg>
+            Status
+          </div>
+          <div>
+            <span class="badge status-badge
+              {% if complaint.status == 'Open' %}badge-open
+              {% elif complaint.status == 'In Progress' %}badge-progress
+              {% else %}badge-resolved{% endif %}">
+              <span class="badge-dot"></span>{{ complaint.status }}
+            </span>
+          </div>
+        </div>
+        <div class="detail-meta-item">
+          <div class="detail-meta-label">
+            <svg class="icon-svg icon-svg-xs" style="stroke:var(--text-muted); margin-right:3px;" viewBox="0 0 24 24"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+            Location
+          </div>
+          <div style="font-size:13px; color:var(--text-secondary);">{{ complaint.location or '—' }}</div>
+        </div>
+        <div class="detail-meta-item">
+          <div class="detail-meta-label">
+            <svg class="icon-svg icon-svg-xs" style="stroke:var(--text-muted); margin-right:3px;" viewBox="0 0 24 24"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>
+            Filed On
+          </div>
+          <div style="font-size:13px; color:var(--text-secondary);">{{ complaint.created_at[:16].replace('T',' ') }}</div>
+        </div>
+        <div class="detail-meta-item">
+          <div class="detail-meta-label">
+            <svg class="icon-svg icon-svg-xs" style="stroke:var(--text-muted); margin-right:3px;" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            Updated
+          </div>
+          <div style="font-size:13px; color:var(--text-secondary);">{{ complaint.updated_at[:16].replace('T',' ') }}</div>
+        </div>
+        {% if session.get('role') == 'admin' %}
+        <div class="detail-meta-item">
+          <div class="detail-meta-label">
+            <svg class="icon-svg icon-svg-xs" style="stroke:var(--text-muted); margin-right:3px;" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            Raised By
+          </div>
+          <div style="font-size:13px; color:var(--text-secondary); font-weight:600;">
+            {{ complaint.raised_by or 'System' }}
+            <span style="font-size:11px; font-weight:normal; color:var(--text-muted);">(@{{ complaint.raised_by_username or 'system' }})</span>
+          </div>
+        </div>
+        {% endif %}
+
+      </div>
+
+      {% if complaint.description %}
+      <div style="margin-top:24px; padding-top:20px; border-top:1px solid var(--glass-border);">
+        <div class="detail-meta-label" style="margin-bottom:10px;">
+          <svg class="icon-svg icon-svg-xs" style="stroke:var(--text-muted); margin-right:3px;" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" x2="8" y1="13" y2="13"/><line x1="16" x2="8" y1="17" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+          Description
+        </div>
+        <p style="font-size:14px; color:var(--text-secondary); line-height:1.8;">{{ complaint.description }}</p>
+      </div>
+      {% endif %}
+    </div>
+
+    {% if session.get('role') == 'admin' %}
+    <!-- Update Status Card -->
+    <div class="glass-card animate-in" style="padding:24px; animation-delay:0.1s;">
+      <div style="font-size:14px; font-weight:700; margin-bottom:16px; display:flex; align-items:center; gap:8px;">
+        <svg class="icon-svg" style="stroke:var(--accent)" viewBox="0 0 24 24"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M3 21v-5h5"/></svg>
+        Update Status
+      </div>
+      <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+        <select class="status-select status-select-lg" data-id="{{ complaint.id }}"
+                id="detailStatusSelect" aria-label="Update complaint status">
+          {% for s in statuses %}
+          <option value="{{ s }}" {% if complaint.status == s %}selected{% endif %}>{{ s }}</option>
+          {% endfor %}
+        </select>
+        <span style="font-size:12px; color:var(--text-muted);" id="statusUpdateMsg"></span>
+      </div>
+    </div>
+    {% endif %}
+
+
+  </div>
+
+  <!-- ── RIGHT: AI Analysis Card ── -->
+  <div style="display:flex; flex-direction:column; gap:20px;" id="aiAnalysisContainer">
+
+    {% if complaint.ai_summary %}
+    <!-- AI Analysis — populated -->
+    <div class="glass-card ai-card animate-in" style="animation-delay:0.12s;">
+
+      <!-- AI Header -->
+      <div class="ai-card-header">
+        <div style="display:flex; align-items:center; gap:12px;">
+          <div class="ai-orb">
+            <svg class="icon-svg icon-svg-md" style="stroke:#fff" viewBox="0 0 24 24"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>
+          </div>
+          <div>
+            <div style="font-size:15px; font-weight:800; letter-spacing:-0.2px;">AI Analysis</div>
+            <div style="font-size:11px; color:var(--text-muted);">Powered by Gemini 2.0 Flash</div>
+          </div>
+        </div>
+        <span class="ai-badge">🤖 Gemini</span>
+      </div>
+
+      <div style="padding:24px; display:flex; flex-direction:column; gap:20px;">
+
+        <!-- Detected Category -->
+        <div class="ai-field">
+          <div class="ai-field-label">
+            <svg class="icon-svg icon-svg-xs" style="stroke:var(--text-muted); margin-right:3px;" viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+            Detected Category
+          </div>
+          <div style="display:flex; align-items:center; gap:10px;">
+            <span class="category-chip ai-result-chip">{{ complaint.ai_category }}</span>
+            {% if complaint.ai_category == complaint.category %}
+            <span class="ai-match-tag match">✓ Matches submission</span>
+            {% else %}
+            <span class="ai-match-tag mismatch">⚡ AI suggests different</span>
+            {% endif %}
+          </div>
+        </div>
+
+        <!-- Suggested Priority -->
+        <div class="ai-field">
+          <div class="ai-field-label">
+            <svg class="icon-svg icon-svg-xs" style="stroke:var(--text-muted); margin-right:3px;" viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+            Suggested Priority
+          </div>
+          <div style="display:flex; align-items:center; gap:10px;">
+            <span class="badge badge-{{ complaint.ai_priority | lower }}">{{ complaint.ai_priority }}</span>
+            {% if complaint.ai_priority == complaint.priority %}
+            <span class="ai-match-tag match">✓ Matches submission</span>
+            {% else %}
+            <span class="ai-match-tag mismatch">⚡ AI suggests different</span>
+            {% endif %}
+          </div>
+        </div>
+
+        <!-- Responsible Department -->
+        <div class="ai-field">
+          <div class="ai-field-label">
+            <svg class="icon-svg icon-svg-xs" style="stroke:var(--text-muted); margin-right:3px;" viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+            Responsible Department
+          </div>
+          <div class="dept-chip">
+            <svg class="icon-svg icon-svg-xs" style="stroke:var(--info); margin-right:3px;" viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+            <span>{{ complaint.ai_department }}</span>
+          </div>
+        </div>
+
+        <!-- AI Summary -->
+        <div class="ai-field">
+          <div class="ai-field-label">
+            <svg class="icon-svg icon-svg-xs" style="stroke:var(--text-muted); margin-right:3px;" viewBox="0 0 24 24"><path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A5 5 0 0 0 8 8c0 1 .3 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5"/><path d="M9 18h6"/><path d="M10 22h4"/></svg>
+            AI Insight
+          </div>
+          <div class="ai-summary-box">
+            <p style="font-size:13px; color:var(--text-secondary); line-height:1.75; margin:0;">
+              {{ complaint.ai_summary }}
+            </p>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Footer -->
+      <div class="ai-card-footer">
+        <span style="font-size:11px; color:var(--text-muted); display:inline-flex; align-items:center; gap:4px;">
+          <svg class="icon-svg icon-svg-xs" style="stroke:var(--text-muted);" viewBox="0 0 24 24"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          Analysis is advisory — final decisions rest with the management team.
+        </span>
+      </div>
+
+    </div>
+
+    {% else %}
+    <!-- AI Analysis — not yet available -->
+    <div class="glass-card animate-in" id="aiAnalysisPlaceholder" style="padding:32px; animation-delay:0.12s; text-align:center; display:flex; flex-direction:column; align-items:center; gap:12px; border-color:rgba(124,111,247,0.15);">
+      <div class="ai-orb" style="margin-bottom:4px; transform:scale(1.15);">
+        <svg class="icon-svg icon-svg-md" style="stroke:#fff" viewBox="0 0 24 24"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>
+      </div>
+      <div style="font-size:16px; font-weight:800;">AI Analysis Pending</div>
+      <p style="font-size:13px; color:var(--text-muted); line-height:1.6; max-width:320px; margin:0 0 8px 0;">
+        {% if session.get('role') == 'admin' %}
+        This complaint does not have classification insights yet. Run Gemini analysis now to detect category and priority.
+        {% else %}
+        This complaint does not have AI classification insights yet. They will become available once the management team reviews it.
+        {% endif %}
+      </p>
+      {% if session.get('role') == 'admin' %}
+      <button class="btn btn-primary" id="runAiAnalysisBtn" data-id="{{ complaint.id }}">
+        <svg class="icon-svg icon-svg-sm" viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+        Generate AI Insights
+      </button>
+      {% endif %}
+    </div>
+
+    {% endif %}
+
+    <!-- Quick Complaint ID Card -->
+    <div class="glass-card animate-in" style="padding:20px; animation-delay:0.17s;">
+      <div style="display:flex; align-items:center; justify-content:space-between;">
+        <div>
+          <div style="font-size:11px; color:var(--text-muted); font-weight:600; text-transform:uppercase; letter-spacing:0.8px;">
+            Complaint ID
+          </div>
+          <div style="font-size:28px; font-weight:800; letter-spacing:-1px;
+                      background:linear-gradient(135deg, var(--accent-light), var(--success));
+                      -webkit-background-clip:text; -webkit-text-fill-color:transparent;
+                      background-clip:text;">
+            #{{ '%04d' % complaint.id }}
+          </div>
+        </div>
+        <div style="color:var(--text-muted); opacity:0.35;">
+          <svg class="icon-svg icon-svg-xl" viewBox="0 0 24 24"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"/></svg>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Status update for detail page
+const sel = document.getElementById('detailStatusSelect');
+const msg = document.getElementById('statusUpdateMsg');
+if (sel) {
+  sel.addEventListener('change', async function () {
+    const id = this.dataset.id;
+    const newStatus = this.value;
+    try {
+      const res = await fetch('/api/update-status', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: parseInt(id), status: newStatus })
+      });
+      const data = await res.json();
+      if (data.success) {
+        msg.textContent = `✓ Updated to "${newStatus}"`;
+        msg.style.color = 'var(--success)';
+        showToast(`Status updated to "${newStatus}"`, 'success');
+        setTimeout(() => { msg.textContent = ''; }, 3000);
+      }
+    } catch (err) {
+      showToast('Failed to update status.', 'error');
+    }
+  });
+}
+
+// On-demand AI analysis trigger
+const aiContainer = document.getElementById('aiAnalysisContainer');
+
+function bindAiAnalysisTrigger() {
+  const runBtn = document.getElementById('runAiAnalysisBtn');
+  const placeholder = document.getElementById('aiAnalysisPlaceholder');
+  if (!runBtn || !placeholder) return;
+
+  runBtn.addEventListener('click', async () => {
+    const id = runBtn.dataset.id;
+    runBtn.classList.add('btn-loading');
+    runBtn.disabled = true;
+    
+    // Add simple loading display to placeholder
+    placeholder.innerHTML = `
+      <div class="loading-container">
+        <div class="spinner-spinner spinner-lg spinner-accent" style="margin-bottom:12px;"></div>
+        <div class="ai-generating-text" style="font-weight:700; font-size:15px;">Gemini is analyzing...</div>
+        <div style="font-size:12px; color:var(--text-muted); max-width:240px; margin-top:4px;">Auto-detecting category, priority, and suggesting responsible department</div>
+      </div>
+    `;
+
+    try {
+      const res = await fetch(`/api/complaint/${id}/analyze`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      let data = {};
+      try {
+        data = await res.json();
+      } catch (jsonErr) {
+        data = { error: 'Failed to parse server response.' };
+      }
+
+      if (res.ok && data.success) {
+        showToast('AI analysis completed successfully!', 'success');
+        
+        // Render populated AI card in place
+        const matchesCategory = data.ai_category === "{{ complaint.category }}";
+        const matchesPriority = data.ai_priority === "{{ complaint.priority }}";
+
+        aiContainer.innerHTML = `
+          <div class="glass-card ai-card animate-in">
+            <div class="ai-card-header">
+              <div style="display:flex; align-items:center; gap:12px;">
+                <div class="ai-orb">
+                  <svg class="icon-svg icon-svg-md" style="stroke:#fff;" viewBox="0 0 24 24"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>
+                </div>
+                <div>
+                  <div style="font-size:15px; font-weight:800; letter-spacing:-0.2px;">AI Analysis</div>
+                  <div style="font-size:11px; color:var(--text-muted);">Powered by Gemini 2.0 Flash</div>
+                </div>
+              </div>
+              <span class="ai-badge">🤖 Gemini</span>
+            </div>
+
+            <div style="padding:24px; display:flex; flex-direction:column; gap:20px;">
+              <div class="ai-field">
+                <div class="ai-field-label">📂 Detected Category</div>
+                <div style="display:flex; align-items:center; gap:10px;">
+                  <span class="category-chip ai-result-chip">${data.ai_category}</span>
+                  ${matchesCategory 
+                    ? '<span class="ai-match-tag match">✓ Matches submission</span>' 
+                    : '<span class="ai-match-tag mismatch">⚡ AI suggests different</span>'}
+                </div>
+              </div>
+
+              <div class="ai-field">
+                <div class="ai-field-label">⚡ Suggested Priority</div>
+                <div style="display:flex; align-items:center; gap:10px;">
+                  <span class="badge badge-${data.ai_priority.toLowerCase()}">${data.ai_priority}</span>
+                  ${matchesPriority 
+                    ? '<span class="ai-match-tag match">✓ Matches submission</span>' 
+                    : '<span class="ai-match-tag mismatch">⚡ AI suggests different</span>'}
+                </div>
+              </div>
+
+              <div class="ai-field">
+                <div class="ai-field-label">🏢 Responsible Department</div>
+                <div class="dept-chip">
+                  <svg class="icon-svg icon-svg-xs" style="stroke:var(--info); margin-right:3px;" viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+                  <span>${data.ai_department}</span>
+                </div>
+              </div>
+
+              <div class="ai-field">
+                <div class="ai-field-label">💡 AI Insight</div>
+                <div class="ai-summary-box">
+                  <p style="font-size:13px; color:var(--text-secondary); line-height:1.75; margin:0;">
+                    ${data.ai_summary}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+
+            <div class="ai-card-footer">
+              <span style="font-size:11px; color:var(--text-muted); display:inline-flex; align-items:center; gap:4px;">
+                <svg class="icon-svg icon-svg-xs" style="stroke:var(--text-muted);" viewBox="0 0 24 24"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                Analysis is advisory — final decisions rest with the management team.
+              </span>
+            </div>
+          </div>
+        `;
+      } else {
+        showToast(data.error || 'AI analysis failed.', 'error');
+        resetPlaceholder(placeholder);
+      }
+    } catch (err) {
+      showToast('Error communicating with backend.', 'error');
+      resetPlaceholder(placeholder);
+    }
+  });
+}
+
+function resetPlaceholder(placeholder) {
+  if (placeholder) {
+    placeholder.innerHTML = `
+      <div class="ai-orb" style="margin-bottom:4px; transform:scale(1.15);">
+        <svg class="icon-svg icon-svg-md" style="stroke:#fff" viewBox="0 0 24 24"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1 1.275-1.275L12 3Z"/></svg>
+      </div>
+      <div style="font-size:16px; font-weight:800;">AI Analysis Not Found</div>
+      <p style="font-size:13px; color:var(--text-muted); line-height:1.6; max-width:320px; margin:0 0 8px 0;">
+        This complaint does not have classification insights yet. Run Gemini analysis now to detect category and priority.
+      </p>
+      <button class="btn btn-primary" id="runAiAnalysisBtn" data-id="{{ complaint.id }}">
+        <svg class="icon-svg icon-svg-sm" viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+        Generate AI Insights
+      </button>
+    `;
+    bindAiAnalysisTrigger();
+  }
+}
+
+bindAiAnalysisTrigger();
+</script>
+{% endblock %}

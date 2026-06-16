@@ -1,0 +1,554 @@
+{% extends "base.html" %}
+
+{% block title %}Analytics — SCIP{% endblock %}
+{% block breadcrumb %}Analytics{% endblock %}
+
+{% block head_extra %}
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.5.1/dist/echarts.min.js"></script>
+{% endblock %}
+
+{% block content %}
+
+<div class="page-header animate-in">
+  <div>
+    <h1 class="page-title">Analytics & Insights</h1>
+    <p class="page-subtitle">Interactive deep-dive into complaint trends, resolution performance, and priority intelligence.</p>
+  </div>
+  <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+    <div class="range-tabs" id="rangeTabs" role="group" aria-label="Time range filter">
+      <button class="range-tab" data-range="3">3M</button>
+      <button class="range-tab active" data-range="6">6M</button>
+      <button class="range-tab" data-range="12">1Y</button>
+      <button class="range-tab" data-range="0">All</button>
+    </div>
+    <a href="{{ url_for('history') }}" class="btn btn-ghost">🗂️ View History</a>
+  </div>
+</div>
+
+<!-- ── KPI Row (filled by JS) ── -->
+<div class="stats-grid" id="kpiRow" style="margin-bottom:28px;">
+  {% for i in range(4) %}
+  <div class="glass-card stat-card animate-in" style="animation-delay:{{ i * 0.06 }}s;">
+    <div class="skeleton" style="width:56px;height:56px;border-radius:14px;flex-shrink:0;"></div>
+    <div class="stat-info" style="flex:1;">
+      <div class="skeleton" style="height:11px;width:60%;margin-bottom:10px;border-radius:4px;"></div>
+      <div class="skeleton" style="height:28px;width:45%;margin-bottom:8px;border-radius:4px;"></div>
+      <div class="skeleton" style="height:10px;width:75%;border-radius:4px;"></div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+<!-- ── Charts ── -->
+<div style="display:flex; flex-direction:column; gap:22px;">
+
+  <!-- 1. Complaint Volume Trend (full-width, zoomable) -->
+  <div class="glass-card chart-panel animate-in" style="animation-delay:0.1s;">
+    <div class="chart-panel-header">
+      <div>
+        <div class="chart-panel-title">📈 Complaint Volume Trend</div>
+        <div class="chart-panel-sub">Monthly intake over selected period · scroll to zoom · drag to pan</div>
+      </div>
+      <span class="chart-panel-badge">Interactive Zoom</span>
+    </div>
+    <div id="trendChart" style="height:300px;width:100%;"></div>
+  </div>
+
+  <!-- 2. Resolution Performance (full-width, grouped bar) -->
+  <div class="glass-card chart-panel animate-in" style="animation-delay:0.14s;">
+    <div class="chart-panel-header">
+      <div>
+        <div class="chart-panel-title">✅ Resolution Performance Over Time</div>
+        <div class="chart-panel-sub">Monthly total vs resolved — track improvement month by month</div>
+      </div>
+      <span class="chart-panel-badge">Comparative</span>
+    </div>
+    <div id="resolutionChart" style="height:280px;width:100%;"></div>
+  </div>
+
+  <!-- 3. Category + Status (2-col) -->
+  <div class="chart-row-2">
+    <div class="glass-card chart-panel animate-in" style="animation-delay:0.18s;">
+      <div class="chart-panel-header">
+        <div>
+          <div class="chart-panel-title">📂 Complaints by Category</div>
+          <div class="chart-panel-sub">Sorted by volume · hover for details</div>
+        </div>
+      </div>
+      <div id="categoryChart" style="height:320px;width:100%;"></div>
+    </div>
+    <div class="glass-card chart-panel animate-in" style="animation-delay:0.21s;">
+      <div class="chart-panel-header">
+        <div>
+          <div class="chart-panel-title">🍩 Status Breakdown</div>
+          <div class="chart-panel-sub">Resolution rate at a glance</div>
+        </div>
+      </div>
+      <div id="statusChart" style="height:320px;width:100%;"></div>
+    </div>
+  </div>
+
+  <!-- 4. Priority + Category×Priority Matrix (2-col) -->
+  <div class="chart-row-2 chart-row-2-asymm">
+    <div class="glass-card chart-panel animate-in" style="animation-delay:0.24s;">
+      <div class="chart-panel-header">
+        <div>
+          <div class="chart-panel-title">⚡ Priority Distribution</div>
+          <div class="chart-panel-sub">Nightingale rose by severity level</div>
+        </div>
+      </div>
+      <div id="priorityChart" style="height:300px;width:100%;"></div>
+    </div>
+    <div class="glass-card chart-panel animate-in" style="animation-delay:0.27s;">
+      <div class="chart-panel-header">
+        <div>
+          <div class="chart-panel-title">🔥 Category × Priority Matrix</div>
+          <div class="chart-panel-sub">Stacked priority breakdown per category</div>
+        </div>
+      </div>
+      <div id="matrixChart" style="height:300px;width:100%;"></div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+/* ═══════════════════════════════════════════════════════════
+   SCIP — Advanced Analytics  ·  Apache ECharts 5
+═══════════════════════════════════════════════════════════ */
+
+// ── Color palette ────────────────────────────────────────────────────
+const P = {
+  accent:   '#6c63ff', success:  '#00d4aa', warning:  '#ffb347',
+  danger:   '#ff6b6b', critical: '#ff4757', info:     '#4fc3f7',
+  muted:    '#8892b0', purple:   '#a78bfa', pink:     '#f472b6',
+  cyan:     '#22d3ee',
+};
+const CAT_COLORS  = [P.accent, P.success, P.warning, P.danger, P.info, P.purple, P.pink, P.cyan];
+const PRI_COLORS  = { Low: P.muted, Medium: P.warning, High: P.danger, Critical: P.critical };
+const STAT_COLORS = { Open: P.warning, 'In Progress': P.info, Resolved: P.success };
+
+// ── ECharts shared config ────────────────────────────────────────────
+const EC_BG   = 'transparent';
+const EC_TEXT = '#8892b0';
+const EC_GRID = 'rgba(255,255,255,0.05)';
+const TT = {
+  backgroundColor: 'rgba(8,12,24,0.96)',
+  borderColor:     'rgba(108,99,255,0.3)',
+  borderWidth:     1,
+  padding:         [10, 14],
+  textStyle:       { color: '#f0f4ff', fontSize: 13, fontFamily: "'Inter',sans-serif" },
+  extraCssText:    'border-radius:12px;box-shadow:0 12px 40px rgba(0,0,0,0.6);',
+};
+const AXIS = {
+  axisLine:  { lineStyle: { color: 'rgba(255,255,255,0.08)' } },
+  splitLine: { lineStyle: { color: EC_GRID, type: 'dashed' } },
+  axisTick:  { show: false },
+  axisLabel: { color: EC_TEXT, fontFamily: "'Inter',sans-serif", fontSize: 11 },
+};
+
+// ── State ─────────────────────────────────────────────────────────────
+const EC = {};   // live chart instances
+
+function ec(id) {
+  const el = document.getElementById(id);
+  if (!el) return null;
+  if (!EC[id]) EC[id] = echarts.init(el, null, { renderer: 'canvas' });
+  else         EC[id].clear();
+  return EC[id];
+}
+
+function monthLabel(ym) {
+  const [y, m] = ym.split('-');
+  return new Date(+y, +m - 1).toLocaleString('en', { month: 'short', year: '2-digit' });
+}
+
+// ── Fetch & render ────────────────────────────────────────────────────
+async function loadAnalytics(range = 6) {
+  try {
+    const res  = await fetch(`/api/analytics?range=${range}`);
+    const data = await res.json();
+    renderKPIs(data.kpi);
+    renderTrend(data.monthly_trend);
+    renderResolution(data.resolution_over_time);
+    renderCategory(data.by_category);
+    renderStatus(data.by_status, data.kpi);
+    renderPriority(data.by_priority);
+    renderMatrix(data.category_priority_matrix);
+  } catch (e) {
+    console.error('[Analytics]', e);
+  }
+}
+
+// ── KPI Cards ─────────────────────────────────────────────────────────
+function renderKPIs(kpi) {
+  if (!kpi) return;
+  const row = document.getElementById('kpiRow');
+  const cards = [
+    { icon:'🗂️', cls:'stat-icon-total',    label:'Total Complaints',   value: kpi.total,
+      sub: `${kpi.this_month} filed this month`,                        subCls:'trend-neutral' },
+    { icon:'✅', cls:'stat-icon-resolved',  label:'Resolution Rate',    value: kpi.resolution_rate+'%',
+      sub: `${kpi.resolved} of ${kpi.total} resolved`,                  subCls:'trend-up' },
+    { icon:'🚨', cls:'stat-icon-high',      label:'Critical Open',      value: kpi.critical_open,
+      sub: kpi.critical_open > 0 ? '⚠️ Needs immediate action' : '✅ All critical resolved',
+      subCls: kpi.critical_open > 0 ? 'trend-down' : 'trend-up' },
+    { icon:'⏱️', cls:'stat-icon-progress', label:'Avg. Resolution',    value: kpi.avg_days_to_resolve+'d',
+      sub: 'Average days to close',                                      subCls:'trend-neutral' },
+  ];
+  row.innerHTML = cards.map((c, i) => `
+    <div class="glass-card stat-card animate-in" style="animation-delay:${i*0.06}s">
+      <div class="stat-icon-wrap ${c.cls}">${c.icon}</div>
+      <div class="stat-info">
+        <div class="stat-label">${c.label}</div>
+        <div class="stat-value">${c.value}</div>
+        <div class="stat-trend ${c.subCls}">${c.sub}</div>
+      </div>
+    </div>`).join('');
+}
+
+// ── 1. Trend Chart (area line + zoom) ─────────────────────────────────
+function renderTrend(data) {
+  const chart = ec('trendChart');
+  if (!chart || !data?.length) return;
+
+  const labels = data.map(d => monthLabel(d.month));
+  const values = data.map(d => d.count);
+  const avg    = values.reduce((a, b) => a + b, 0) / (values.length || 1);
+
+  chart.setOption({
+    backgroundColor: EC_BG,
+    tooltip: {
+      ...TT, trigger: 'axis',
+      axisPointer: { type: 'cross',
+        crossStyle:  { color: P.accent, width: 1 },
+        lineStyle:   { color: P.accent, type: 'dashed', width: 1 } },
+      formatter(p) {
+        const pt = p[0];
+        return `<div style="font-weight:700;color:#f0f4ff;margin-bottom:3px">${pt.name}</div>
+                <span style="color:${P.accent}">●</span> ${pt.value} complaint${pt.value !== 1 ? 's' : ''}`;
+      }
+    },
+    grid: { top: 20, bottom: 68, left: 50, right: 24 },
+    xAxis: { type: 'category', data: labels, ...AXIS, boundaryGap: false },
+    yAxis: { type: 'value', ...AXIS, minInterval: 1,
+      splitLine: { lineStyle: { color: EC_GRID, type: 'dashed' } } },
+    dataZoom: [
+      { type: 'inside', zoomOnMouseWheel: true, moveOnMouseMove: false },
+      {
+        type: 'slider', bottom: 6, height: 26,
+        borderColor:  'rgba(108,99,255,0.15)',
+        fillerColor:  'rgba(108,99,255,0.12)',
+        handleStyle:  { color: P.accent, borderColor: P.accent },
+        moveHandleStyle: { color: P.accent },
+        textStyle:    { color: EC_TEXT, fontSize: 10 },
+        selectedDataBackground: {
+          lineStyle: { color: P.accent },
+          areaStyle: { color: 'rgba(108,99,255,0.2)' }
+        },
+        brushSelect: false,
+      }
+    ],
+    series: [{
+      name: 'Complaints', type: 'line',
+      data: values, smooth: 0.4,
+      symbol: 'circle', symbolSize: 7,
+      lineStyle: { color: P.accent, width: 3, shadowColor: 'rgba(108,99,255,0.4)', shadowBlur: 8 },
+      itemStyle: { color: P.accent, borderColor: '#fff', borderWidth: 2 },
+      areaStyle: {
+        color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+          { offset: 0,   color: 'rgba(108,99,255,0.45)' },
+          { offset: 0.6, color: 'rgba(108,99,255,0.12)' },
+          { offset: 1,   color: 'rgba(108,99,255,0.01)' },
+        ])
+      },
+      markLine: {
+        silent: true, symbol: 'none',
+        lineStyle: { color: P.warning, type: 'dashed', width: 1.5, opacity: 0.75 },
+        label: { show: true, position: 'end', color: P.warning, fontSize: 11,
+          fontFamily: "'Inter',sans-serif", formatter: `Avg ${avg.toFixed(1)}` },
+        data: [{ yAxis: avg }]
+      }
+    }]
+  });
+}
+
+// ── 2. Resolution Over Time (overlapping bars) ─────────────────────────
+function renderResolution(data) {
+  const chart = ec('resolutionChart');
+  if (!chart || !data?.length) return;
+
+  const labels   = data.map(d => monthLabel(d.month));
+  const totals   = data.map(d => d.total);
+  const resolved = data.map(d => d.resolved);
+
+  chart.setOption({
+    backgroundColor: EC_BG,
+    tooltip: {
+      ...TT, trigger: 'axis',
+      formatter(params) {
+        const tot = params.find(p => p.seriesName === 'Total')?.value ?? 0;
+        const res = params.find(p => p.seriesName === 'Resolved')?.value ?? 0;
+        const rate = tot ? ((res / tot) * 100).toFixed(1) : '0.0';
+        return `
+          <div style="font-weight:700;color:#f0f4ff;margin-bottom:6px">${params[0].name}</div>
+          <div style="margin-bottom:3px"><span style="color:${P.accent}">▐</span> Total:
+            <strong style="color:#f0f4ff"> ${tot}</strong></div>
+          <div style="margin-bottom:3px"><span style="color:${P.success}">▐</span> Resolved:
+            <strong style="color:${P.success}"> ${res}</strong></div>
+          <div style="margin-top:6px;padding-top:6px;border-top:1px solid rgba(255,255,255,0.1)">
+            Rate: <strong style="color:${P.success}">${rate}%</strong></div>`;
+      }
+    },
+    legend: {
+      top: 4, right: 8, icon: 'roundRect',
+      itemWidth: 12, itemHeight: 8, itemGap: 18,
+      textStyle: { color: EC_TEXT, fontSize: 12, fontFamily: "'Inter',sans-serif" }
+    },
+    grid: { top: 38, bottom: 32, left: 50, right: 24 },
+    xAxis: { type: 'category', data: labels, ...AXIS, boundaryGap: true },
+    yAxis: { type: 'value', ...AXIS, minInterval: 1 },
+    series: [
+      {
+        name: 'Total', type: 'bar', data: totals, barWidth: '48%',
+        itemStyle: {
+          color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+            { offset: 0, color: 'rgba(108,99,255,0.55)' },
+            { offset: 1, color: 'rgba(108,99,255,0.15)' },
+          ]),
+          borderRadius: [5, 5, 0, 0],
+        }
+      },
+      {
+        name: 'Resolved', type: 'bar', data: resolved,
+        barWidth: '48%', barGap: '-100%',
+        itemStyle: {
+          color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+            { offset: 0, color: '#00d4aa' },
+            { offset: 1, color: 'rgba(0,212,170,0.55)' },
+          ]),
+          borderRadius: [5, 5, 0, 0],
+        },
+        emphasis: { itemStyle: { color: '#00ffcc' } }
+      }
+    ]
+  });
+}
+
+// ── 3. Category (horizontal gradient bars) ─────────────────────────────
+function renderCategory(data) {
+  const chart = ec('categoryChart');
+  if (!chart || !data?.length) return;
+
+  const sorted = [...data].sort((a, b) => a.count - b.count);
+  const labels = sorted.map(d => d.category);
+  const values = sorted.map(d => d.count);
+
+  chart.setOption({
+    backgroundColor: EC_BG,
+    tooltip: {
+      ...TT, trigger: 'axis', axisPointer: { type: 'shadow' },
+      formatter: p => `<div style="font-weight:700;color:#f0f4ff">${p[0].name}</div>
+        <span style="color:${CAT_COLORS[0]}">●</span> ${p[0].value} complaints`
+    },
+    grid: { top: 10, bottom: 16, left: 168, right: 58 },
+    xAxis: { type: 'value', ...AXIS },
+    yAxis: { type: 'category', data: labels, ...AXIS,
+      axisLabel: { fontSize: 12, color: EC_TEXT, width: 152, overflow: 'truncate' } },
+    series: [{
+      type: 'bar',
+      data: sorted.map((d, i) => ({
+        value: d.count,
+        itemStyle: {
+          color: new echarts.graphic.LinearGradient(0, 0, 1, 0, [
+            { offset: 0, color: CAT_COLORS[i % CAT_COLORS.length] + '44' },
+            { offset: 1, color: CAT_COLORS[i % CAT_COLORS.length] },
+          ]),
+          borderRadius: [0, 7, 7, 0],
+        },
+        emphasis: {
+          itemStyle: { shadowBlur: 12, shadowColor: CAT_COLORS[i % CAT_COLORS.length] + '66' }
+        }
+      })),
+      barWidth: '60%',
+      label: { show: true, position: 'right', color: EC_TEXT, fontSize: 11,
+        fontFamily: "'Inter',sans-serif", formatter: '{c}' },
+      showBackground: true,
+      backgroundStyle: { color: 'rgba(255,255,255,0.025)', borderRadius: [0, 7, 7, 0] },
+    }]
+  });
+}
+
+// ── 4. Status Donut (center % label) ──────────────────────────────────
+function renderStatus(data, kpi) {
+  const chart = ec('statusChart');
+  if (!chart || !data?.length) return;
+
+  chart.setOption({
+    backgroundColor: EC_BG,
+    tooltip: {
+      ...TT, trigger: 'item',
+      formatter: p => `<div style="font-weight:700;color:#f0f4ff">${p.name}</div>
+        <span style="color:${p.color}">●</span> ${p.value} (${p.percent.toFixed(1)}%)`
+    },
+    legend: {
+      bottom: 6, left: 'center', orient: 'horizontal',
+      icon: 'circle', itemWidth: 9, itemHeight: 9, itemGap: 20,
+      textStyle: { color: EC_TEXT, fontSize: 12, fontFamily: "'Inter',sans-serif" }
+    },
+    series: [{
+      type: 'pie',
+      radius: ['54%', '82%'],
+      center: ['50%', '44%'],
+      avoidLabelOverlap: false,
+      padAngle: 4,
+      itemStyle: { borderRadius: 8, borderColor: 'rgba(8,12,24,0.5)', borderWidth: 3 },
+      label: {
+        show: true, position: 'center',
+        formatter: () => `{rate|${kpi?.resolution_rate ?? 0}%}\n{lbl|Resolved}`,
+        rich: {
+          rate: { fontSize: 30, fontWeight: 800, color: '#f0f4ff',
+            fontFamily: "'Inter',sans-serif", lineHeight: 38 },
+          lbl:  { fontSize: 11, color: EC_TEXT,
+            fontFamily: "'Inter',sans-serif", lineHeight: 18 }
+        }
+      },
+      emphasis: { scale: true, scaleSize: 7, label: { show: true } },
+      labelLine: { show: false },
+      data: data.map(d => ({
+        name: d.status, value: d.count,
+        itemStyle: { color: STAT_COLORS[d.status] || P.muted }
+      }))
+    }]
+  });
+}
+
+// ── 5. Priority Nightingale Rose ───────────────────────────────────────
+function renderPriority(data) {
+  const chart = ec('priorityChart');
+  if (!chart || !data?.length) return;
+
+  const ORDER  = ['Low', 'Medium', 'High', 'Critical'];
+  const sorted = ORDER.map(p => ({
+    priority: p, count: data.find(d => d.priority === p)?.count ?? 0
+  }));
+
+  chart.setOption({
+    backgroundColor: EC_BG,
+    tooltip: {
+      ...TT, trigger: 'item',
+      formatter: p => `<div style="font-weight:700;color:#f0f4ff">${p.name} Priority</div>
+        <span style="color:${p.color}">●</span> ${p.value} complaints (${p.percent.toFixed(1)}%)`
+    },
+    series: [{
+      type: 'pie',
+      radius: ['18%', '76%'],
+      center: ['50%', '50%'],
+      roseType: 'area',
+      padAngle: 3,
+      itemStyle: { borderRadius: 8, borderColor: 'rgba(8,12,24,0.4)', borderWidth: 2 },
+      label: {
+        show: true, color: EC_TEXT, fontSize: 11,
+        fontFamily: "'Inter',sans-serif",
+        formatter: p => `{n|${p.name}}\n{v|${p.value}}`,
+        rich: {
+          n: { fontSize: 11, color: EC_TEXT, fontFamily: "'Inter',sans-serif", lineHeight: 16 },
+          v: { fontSize: 14, fontWeight: 700, color: '#f0f4ff',
+            fontFamily: "'Inter',sans-serif", lineHeight: 18 },
+        }
+      },
+      labelLine: { lineStyle: { color: 'rgba(255,255,255,0.2)' } },
+      emphasis: { scale: true, scaleSize: 7,
+        itemStyle: { shadowBlur: 16, shadowColor: 'rgba(0,0,0,0.5)' } },
+      data: sorted.map(d => ({
+        name: d.priority, value: d.count,
+        itemStyle: { color: PRI_COLORS[d.priority] }
+      }))
+    }]
+  });
+}
+
+// ── 6. Category × Priority Stacked Bar ────────────────────────────────
+function renderMatrix(data) {
+  const chart = ec('matrixChart');
+  if (!chart || !data?.length) return;
+
+  // Abbreviate long names for the X-axis
+  const labels = data.map(d =>
+    d.category
+      .replace('Roads & Infrastructure', 'Roads')
+      .replace('Parks & Recreation', 'Parks')
+      .replace('Public Safety', 'Safety')
+      .replace('Noise Pollution', 'Noise')
+      .replace('Water Supply', 'Water')
+      .replace('Electricity', 'Elec.')
+      .replace('Sanitation', 'Sanit.')
+      .replace('Drainage', 'Drainage')
+  );
+
+  const PRIS    = ['Low', 'Medium', 'High', 'Critical'];
+  const PRICLRS = [P.muted, P.warning, P.danger, P.critical];
+
+  chart.setOption({
+    backgroundColor: EC_BG,
+    tooltip: {
+      ...TT, trigger: 'axis', axisPointer: { type: 'shadow' },
+      formatter(params) {
+        const cat  = data[params[0].dataIndex]?.category ?? '';
+        const tot  = params.reduce((s, p) => s + p.value, 0);
+        let html   = `<div style="font-weight:700;color:#f0f4ff;margin-bottom:6px">${cat}</div>`;
+        params.forEach(p => {
+          if (p.value > 0) {
+            html += `<div style="color:${PRICLRS[PRIS.indexOf(p.seriesName)]}">
+              ● ${p.seriesName}: <strong>${p.value}</strong></div>`;
+          }
+        });
+        html += `<div style="margin-top:6px;border-top:1px solid rgba(255,255,255,0.1);padding-top:5px">
+          Total: <strong style="color:#f0f4ff">${tot}</strong></div>`;
+        return html;
+      }
+    },
+    legend: {
+      top: 4, right: 8, orient: 'horizontal',
+      icon: 'roundRect', itemWidth: 10, itemHeight: 8, itemGap: 12,
+      textStyle: { color: EC_TEXT, fontSize: 11, fontFamily: "'Inter',sans-serif" }
+    },
+    grid: { top: 36, bottom: 48, left: 28, right: 20 },
+    xAxis: {
+      type: 'category', data: labels, ...AXIS,
+      axisLabel: { fontSize: 10, interval: 0, rotate: 0, color: EC_TEXT,
+        overflow: 'break', width: 60 }
+    },
+    yAxis: { type: 'value', ...AXIS, minInterval: 1 },
+    series: PRIS.map((p, i) => ({
+      name: p, type: 'bar', stack: 'pri',
+      data: data.map(d => d[p] ?? 0),
+      barWidth: '60%',
+      itemStyle: {
+        color: PRICLRS[i], opacity: 0.9,
+        borderRadius: i === PRIS.length - 1 ? [5, 5, 0, 0] : 0
+      },
+      emphasis: { itemStyle: { opacity: 1 } }
+    }))
+  });
+}
+
+// ── Range tabs ─────────────────────────────────────────────────────────
+document.querySelectorAll('.range-tab').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.range-tab').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    loadAnalytics(parseInt(btn.dataset.range) || 0);
+  });
+});
+
+// ── Responsive resize ──────────────────────────────────────────────────
+window.addEventListener('resize', () => {
+  Object.values(EC).forEach(c => c?.resize());
+});
+
+// ── Initial load ───────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => loadAnalytics(6));
+</script>
+{% endblock %}

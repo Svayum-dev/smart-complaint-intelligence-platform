@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Sign up to report and track complaints inside your society.">
+  <title>Register Resident — SCIP</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css', v='3.2') }}">
+  <style>
+    body {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      margin: 0;
+      padding: 20px;
+      background-color: var(--bg-base, #0b0f19);
+      overflow-x: hidden;
+    }
+
+    .register-container {
+      width: 100%;
+      max-width: 440px;
+      position: relative;
+      z-index: 10;
+    }
+
+    .register-card {
+      padding: 40px;
+      border-radius: 20px;
+      background: rgba(30, 41, 59, 0.45);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.35);
+    }
+
+    .register-header {
+      text-align: center;
+      margin-bottom: 28px;
+    }
+
+    .logo-container {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 54px;
+      height: 54px;
+      border-radius: 14px;
+      background: linear-gradient(135deg, var(--accent, #7c6ff7), var(--accent-light, #968bf9));
+      margin-bottom: 16px;
+      box-shadow: 0 8px 20px rgba(124, 111, 247, 0.3);
+    }
+
+    .logo-svg {
+      width: 28px;
+      height: 28px;
+      stroke: #ffffff;
+      fill: none;
+      stroke-width: 2;
+    }
+
+    .register-title {
+      font-size: 24px;
+      font-weight: 800;
+      color: var(--text-primary, #ffffff);
+      margin: 0 0 6px 0;
+      letter-spacing: -0.5px;
+    }
+
+    .register-subtitle {
+      font-size: 14px;
+      color: var(--text-muted, #94a3b8);
+      margin: 0;
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    .form-label {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-secondary, #cbd5e1);
+      margin-bottom: 8px;
+    }
+
+    .form-input {
+      width: 100%;
+      padding: 12px 16px;
+      border-radius: 10px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      background: rgba(15, 23, 42, 0.6);
+      color: #ffffff;
+      font-size: 14px;
+      transition: all 0.25s ease;
+    }
+
+    .form-input:focus {
+      outline: none;
+      border-color: var(--accent, #7c6ff7);
+      box-shadow: 0 0 0 3px rgba(124, 111, 247, 0.15);
+      background: rgba(15, 23, 42, 0.8);
+    }
+
+    .btn-submit {
+      width: 100%;
+      padding: 14px;
+      border-radius: 10px;
+      border: none;
+      background: linear-gradient(135deg, var(--accent, #7c6ff7), var(--accent-light, #968bf9));
+      color: #ffffff;
+      font-weight: 700;
+      font-size: 15px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: all 0.25s ease;
+      box-shadow: 0 4px 12px rgba(124, 111, 247, 0.2);
+    }
+
+    .btn-submit:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 20px rgba(124, 111, 247, 0.35);
+      background: linear-gradient(135deg, var(--accent-light, #968bf9), var(--accent, #7c6ff7));
+    }
+
+    .btn-submit:active {
+      transform: translateY(1px);
+    }
+
+    .login-link {
+      text-align: center;
+      margin-top: 24px;
+      font-size: 13px;
+      color: var(--text-muted, #94a3b8);
+      padding-top: 20px;
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .login-link a {
+      color: var(--accent-light, #968bf9);
+      text-decoration: none;
+      font-weight: 600;
+      transition: color 0.2s;
+    }
+
+    .login-link a:hover {
+      text-decoration: underline;
+    }
+
+    .alert {
+      margin-bottom: 20px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Ambient orbs -->
+  <div class="bg-orb bg-orb-1"></div>
+  <div class="bg-orb bg-orb-2"></div>
+  <div class="bg-orb bg-orb-3"></div>
+
+  <div class="register-container">
+
+    <!-- Validation Errors -->
+    {% if errors %}
+      {% for error in errors %}
+        <div class="alert alert-danger">
+          <span class="alert-icon">
+            <svg class="icon-svg" style="stroke:var(--danger)" viewBox="0 0 24 24"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+          </span>
+          <span>{{ error }}</span>
+        </div>
+      {% endfor %}
+    {% endif %}
+
+    <div class="register-card">
+      <div class="register-header">
+        <div class="logo-container">
+          <svg class="logo-svg" viewBox="0 0 24 24">
+            <path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"/>
+            <path d="M6 12H4a2 2 0 0 0-2 2v8"/>
+            <path d="M18 16h2a2 2 0 0 1 2 2v4"/>
+            <path d="M10 6h4"/>
+            <path d="M10 10h4"/>
+            <path d="M10 14h4"/>
+            <path d="M10 18h4"/>
+          </svg>
+        </div>
+        <h1 class="register-title">Register Account</h1>
+        <p class="register-subtitle">Sign up to submit and track society complaints</p>
+      </div>
+
+      <form method="POST" action="{{ url_for('register') }}">
+        <div class="form-group">
+          <label class="form-label" for="full_name">Full Name</label>
+          <input type="text" id="full_name" name="full_name" class="form-input" placeholder="e.g. Jane Resident" required value="{{ form_data.get('full_name', '') }}">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="username">Username</label>
+          <input type="text" id="username" name="username" class="form-input" placeholder="Choose a username" required value="{{ form_data.get('username', '') }}" autocomplete="username">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="password">Password</label>
+          <input type="password" id="password" name="password" class="form-input" placeholder="Min. 6 characters" required autocomplete="new-password">
+        </div>
+
+        <button type="submit" class="btn-submit">
+          <svg class="icon-svg icon-svg-xs" style="stroke:#fff;" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" x2="20" y1="8" y2="14"/><line x1="17" x2="23" y1="11" y2="11"/></svg>
+          Create Account
+        </button>
+      </form>
+
+      <div class="login-link">
+        Already have an account? <a href="{{ url_for('login') }}">Sign In here</a>
+      </div>
+    </div>
+  </div>
+
+</body>
+</html>

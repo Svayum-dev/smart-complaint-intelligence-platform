@@ -1,0 +1,207 @@
+{% extends "base.html" %}
+
+{% block title %}Complaint History — SCIP{% endblock %}
+{% block breadcrumb %}Complaint History{% endblock %}
+
+{% block content %}
+<div class="page-header animate-in">
+  <div>
+    <h1 class="page-title">Complaint History</h1>
+    <p class="page-subtitle">Browse, filter, and manage all complaints. Update statuses directly from the table.</p>
+  </div>
+  <a href="{{ url_for('submit') }}" class="btn btn-primary">
+    <svg class="icon-svg icon-svg-xs" viewBox="0 0 24 24"><line x1="12" x2="12" y1="5" y2="19"/><line x1="5" x2="19" y1="12" y2="12"/></svg>
+    New Complaint
+  </a>
+</div>
+
+<div class="glass-card table-card animate-in" style="animation-delay:0.1s;">
+
+  <!-- Filter Bar -->
+  <div class="filter-bar">
+    <span style="font-size:12px; font-weight:600; color:var(--text-secondary); white-space:nowrap; display:inline-flex; align-items:center; gap:6px;">
+      <svg class="icon-svg icon-svg-xs" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" x2="16.65" y1="21" y2="16.65"/></svg>
+      Filter by:
+    </span>
+
+    <form method="GET" action="{{ url_for('history') }}" id="filterForm" style="display:contents;">
+      <!-- Keep sort/order params -->
+      <input type="hidden" name="sort" value="{{ sort }}" />
+      <input type="hidden" name="order" value="{{ order }}" />
+      <input type="hidden" name="page" value="1" />
+
+      <select name="category" class="filter-select" onchange="this.form.submit()">
+        <option value="">All Categories</option>
+        {% for cat in categories %}
+        <option value="{{ cat }}" {% if category == cat %}selected{% endif %}>{{ cat }}</option>
+        {% endfor %}
+      </select>
+
+      <select name="priority" class="filter-select" onchange="this.form.submit()">
+        <option value="">All Priorities</option>
+        {% for p in priorities %}
+        <option value="{{ p }}" {% if priority == p %}selected{% endif %}>{{ p }}</option>
+        {% endfor %}
+      </select>
+
+      <select name="status" class="filter-select" onchange="this.form.submit()">
+        <option value="">All Statuses</option>
+        {% for s in statuses %}
+        <option value="{{ s }}" {% if status == s %}selected{% endif %}>{{ s }}</option>
+        {% endfor %}
+      </select>
+    </form>
+
+    {% if category or priority or status %}
+    <a href="{{ url_for('history') }}" class="filter-clear">
+      <svg class="icon-svg icon-svg-xs" style="margin-right:2px;" viewBox="0 0 24 24"><line x1="18" x2="6" y1="6" y2="18"/><line x1="6" x2="18" y1="6" y2="18"/></svg>
+      Clear Filters
+    </a>
+    {% endif %}
+
+    <span class="results-count">{{ total }} result{{ 's' if total != 1 }}</span>
+  </div>
+
+  <!-- Table -->
+  {% if complaints %}
+  <div style="overflow-x:auto;">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th data-sort="id" style="width:60px;">#</th>
+          <th data-sort="title">Title</th>
+          <th data-sort="category">Category</th>
+          {% if session.get('role') == 'admin' %}
+          <th>Raised By</th>
+          {% endif %}
+          <th data-sort="priority">Priority</th>
+          <th data-sort="status">Status</th>
+          <th>Location</th>
+          <th data-sort="created_at">Date/Time Filed</th>
+          {% if session.get('role') == 'admin' %}
+          <th style="width:140px;">Update Status</th>
+          {% endif %}
+        </tr>
+      </thead>
+      <tbody>
+        {% for c in complaints %}
+        <tr>
+          <td style="color:var(--text-muted); font-size:12px;">#{{ c.id }}</td>
+
+          <td class="complaint-title-cell">
+            <a href="{{ url_for('complaint_detail', complaint_id=c.id) }}" class="complaint-title-link">
+              <span class="title-text" title="{{ c.title }}">{{ c.title }}</span>
+            </a>
+            {% if c.description %}
+            <span class="complaint-id" title="{{ c.description }}">{{ c.description[:60] }}{{ '…' if c.description | length > 60 }}</span>
+            {% endif %}
+          </td>
+
+          <td><span class="category-chip">{{ c.category }}</span></td>
+
+          {% if session.get('role') == 'admin' %}
+          <td style="font-size:13px; color:var(--text-secondary);">
+            <div style="font-weight:600;">{{ c.raised_by or 'System' }}</div>
+            <div style="font-size:10px; color:var(--text-muted);">@{{ c.raised_by_username or 'system' }}</div>
+          </td>
+          {% endif %}
+
+          <td>
+            <span class="badge badge-{{ c.priority | lower }}">{{ c.priority }}</span>
+            {% if c.ai_category %}
+            <span class="ai-mini-badge" title="AI Classification: {{ c.ai_priority }} · {{ c.ai_department }}" style="vertical-align: middle; margin-left: 4px;">
+              <svg class="icon-svg icon-svg-xs" style="stroke:var(--accent-light);" viewBox="0 0 24 24"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>
+            </span>
+            {% endif %}
+          </td>
+
+          <td>
+            <span class="badge status-badge
+              {% if c.status == 'Open' %}badge-open
+              {% elif c.status == 'In Progress' %}badge-progress
+              {% else %}badge-resolved{% endif %}">
+              <span class="badge-dot"></span>
+              {{ c.status }}
+            </span>
+          </td>
+
+          <td style="color:var(--text-secondary); font-size:12px;">{{ c.location or '—' }}</td>
+
+          <td style="color:var(--text-muted); font-size:12px; white-space:nowrap;" title="{{ c.created_at }}">
+            {{ c.created_at[:16].replace('T',' ') }}
+          </td>
+
+          {% if session.get('role') == 'admin' %}
+          <td>
+            <select class="status-select" data-id="{{ c.id }}" aria-label="Update status for complaint #{{ c.id }}">
+              {% for s in statuses %}
+              <option value="{{ s }}" {% if c.status == s %}selected{% endif %}>{{ s }}</option>
+              {% endfor %}
+            </select>
+          </td>
+          {% endif %}
+        </tr>
+
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Pagination -->
+  {% if total_pages > 1 %}
+  <div class="pagination">
+    <!-- Prev -->
+    {% if page > 1 %}
+    <a href="{{ url_for('history', page=page-1, category=category, priority=priority, status=status, sort=sort, order=order) }}"
+       class="page-btn">‹</a>
+    {% else %}
+    <span class="page-btn disabled">‹</span>
+    {% endif %}
+
+    <!-- Page numbers (show window of 5) -->
+    {% set start_page = [1, page - 2] | max %}
+    {% set end_page = [total_pages, start_page + 4] | min %}
+    {% set start_page = [1, end_page - 4] | max %}
+
+    {% if start_page > 1 %}
+    <a href="{{ url_for('history', page=1, category=category, priority=priority, status=status, sort=sort, order=order) }}" class="page-btn">1</a>
+    {% if start_page > 2 %}<span class="page-btn disabled" style="width:auto; padding:0 4px;">…</span>{% endif %}
+    {% endif %}
+
+    {% for p in range(start_page, end_page + 1) %}
+    <a href="{{ url_for('history', page=p, category=category, priority=priority, status=status, sort=sort, order=order) }}"
+       class="page-btn {% if p == page %}active{% endif %}">{{ p }}</a>
+    {% endfor %}
+
+    {% if end_page < total_pages %}
+    {% if end_page < total_pages - 1 %}<span class="page-btn disabled" style="width:auto; padding:0 4px;">…</span>{% endif %}
+    <a href="{{ url_for('history', page=total_pages, category=category, priority=priority, status=status, sort=sort, order=order) }}"
+       class="page-btn">{{ total_pages }}</a>
+    {% endif %}
+
+    <!-- Next -->
+    {% if page < total_pages %}
+    <a href="{{ url_for('history', page=page+1, category=category, priority=priority, status=status, sort=sort, order=order) }}"
+       class="page-btn">›</a>
+    {% else %}
+    <span class="page-btn disabled">›</span>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  {% else %}
+  <div class="empty-state animate-in">
+    <svg class="empty-illustration-svg" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" x2="16.65" y1="21" y2="16.65"/></svg>
+    <div class="empty-title">No complaints found</div>
+    <div class="empty-desc">
+      {% if category or priority or status %}
+        Try adjusting or <a href="{{ url_for('history') }}" style="color:var(--accent-light); font-weight:600; text-decoration:underline;">clearing your filters</a>.
+      {% else %}
+        No complaints have been submitted yet. <a href="{{ url_for('submit') }}" style="color:var(--accent-light); font-weight:600; text-decoration:underline;">Submit one now</a>.
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+
+</div>
+{% endblock %}
